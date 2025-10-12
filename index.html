@@ -2,24 +2,45 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <title>PA#1 - Shoe Surface (Variant 13)</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>PA#2 - Variant 13</title>
   <style>
     body { background-color: #EEEEEE; font-family: sans-serif; }
     #canvas-holder { display:flex; justify-content:center; margin-top:12px; }
     canvas { background-color: #202020; border: 1px solid #333; }
   </style>
+  <script>
+    function loadScript(url) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url + '?v=' + new Date().getTime(); 
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
 
-
-    <script src="./three.min.js"></script>
-    <script src="./Utils/m4.js"></script>
-    <script src="./Utils/trackball-rotator.js"></script>
-    <script src="./shader.gpu"></script>
-    <script src="./Model.js"></script>
-    <script src="./main.js"></script>
+    async function loadScripts() {
+      try {
+        await loadScript('./Utils/m4.js');
+        await loadScript('./Utils/trackball-rotator.js');
+        await loadScript('./shader.gpu');
+        await loadScript('./Model.js');
+        await loadScript('./main.js');
+       
+        if (typeof init === 'function') {
+          init();
+        }
+      } catch (error) {
+        console.error('Error loading scripts:', error);
+      }
+    }
+  </script>
 </head>
-<body onload="init()">
-
-  <h2 style="text-align:center">Wireframe: Shoe Surface — Variant 13</h2>
+<body onload="loadScripts()">
+  <h2 style="text-align:center">Shoe Surface — Variant 13</h2>
 
   <p id="message" style="text-align:center">
     Drag your mouse on the surface to rotate it. (Touch: use finger)
@@ -29,5 +50,27 @@
     <canvas width="700" height="700" id="webglcanvas"></canvas>
   </div>
 
+  <div id="error-message" style="color: red; text-align: center; margin-top: 10px;"></div>
+
+  <script>
+ 
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      const errorMessage = document.getElementById('error-message');
+      if (errorMessage) {
+        errorMessage.textContent = 'Error: ' + msg;
+      }
+      return false;
+    };
+
+    window.addEventListener('load', function() {
+      const canvas = document.getElementById('webglcanvas');
+      if (!canvas.getContext('webgl')) {
+        const errorMessage = document.getElementById('error-message');
+        if (errorMessage) {
+          errorMessage.textContent = 'Your browser does not support WebGL';
+        }
+      }
+    });
+  </script>
 </body>
 </html>

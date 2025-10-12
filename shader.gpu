@@ -1,0 +1,56 @@
+var vertexShaderSource = `
+    attribute vec3 vertex;
+    attribute vec3 normal;
+    
+    uniform mat4 ModelViewProjectionMatrix;
+    uniform mat4 ModelViewMatrix;
+    uniform mat4 NormalMatrix;
+    uniform vec3 lightPosition;
+    
+    varying vec3 vNormal;
+    varying vec3 vViewPos;
+    varying vec3 vLightPos;
+    
+    void main() {
+        vec4 viewPos = ModelViewMatrix * vec4(vertex, 1.0);
+        vViewPos = viewPos.xyz;
+        vNormal = (NormalMatrix * vec4(normal, 0.0)).xyz;
+        vLightPos = (ModelViewMatrix * vec4(lightPosition, 1.0)).xyz;
+        
+        gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
+    }
+`;
+
+var fragmentShaderSource = `
+    precision mediump float;
+    
+    varying vec3 vNormal;
+    varying vec3 vViewPos;
+    varying vec3 vLightPos;
+    
+    uniform vec3 ambientColor;
+    uniform vec3 diffuseColor;
+    uniform vec3 specularColor;
+    uniform float shininess;
+    
+    void main() {
+        vec3 normal = normalize(vNormal);
+        vec3 lightDir = normalize(vLightPos - vViewPos);
+        vec3 viewDir = normalize(-vViewPos);
+        vec3 reflectDir = reflect(-lightDir, normal);
+        
+        // Ambient
+        vec3 ambient = ambientColor;
+        
+        // Diffuse
+        float diff = max(dot(normal, lightDir), 0.0);
+        vec3 diffuse = diff * diffuseColor;
+        
+        // Specular
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+        vec3 specular = spec * specularColor;
+        
+        vec3 result = ambient + diffuse + specular;
+        gl_FragColor = vec4(result, 1.0);
+    }
+`;
