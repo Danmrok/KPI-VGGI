@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>PA#1 - Shoe Surface (Variant 13)</title>
+  <style>
+    body { background-color: #EEEEEE; font-family: sans-serif; }
+    #canvas-holder { display:flex; justify-content:center; margin-top:12px; }
+    canvas { background-color: #202020; border: 1px solid #333; }
+  </style>
+
+
+    <script src="./three.min.js"></script>
+    <script src="./Utils/m4.js"></script>
+    <script src="./Utils/trackball-rotator.js"></script>
+    <script src="./shader.gpu"></script>
+    <script src="./Model.js"></script>
+    <script src="./main.js"></script>
+</head>
+<body onload="init()">
+
+  <h2 style="text-align:center">Wireframe: Shoe Surface — Variant 13</h2>
+
+  <p id="message" style="text-align:center">
+    Drag your mouse on the surface to rotate it. (Touch: use finger)
+  </p>
+
+  <div id="canvas-holder">
+    <canvas width="700" height="700" id="webglcanvas"></canvas>
+  </div>
+
+</body>
+</html>
