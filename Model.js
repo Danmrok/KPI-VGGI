@@ -14,9 +14,13 @@ function Model(name, gl, options) {
     this.vertexBuffer = null;
     this.indexBuffer = null;
     this.normalBuffer = null;
+    this.texcoordBuffer = null;
+    this.tangentBuffer = null;
     
     this.vertices = new Float32Array(totalVertices * 3);
     this.normals = new Float32Array(totalVertices * 3);
+    this.texcoords = new Float32Array(totalVertices * 2);
+    this.tangents = new Float32Array(totalVertices * 4);
     this.indices = new Uint16Array(totalIndices);
     
     this.vertexCount = 0;
@@ -26,6 +30,8 @@ function Model(name, gl, options) {
     
     this.vertexBuffer = gl.createBuffer();
     this.normalBuffer = gl.createBuffer();
+    this.texcoordBuffer = gl.createBuffer();
+    this.tangentBuffer = gl.createBuffer();
     this.indexBuffer = gl.createBuffer();
 }
 
@@ -37,10 +43,26 @@ Model.defaultSurface = function(u, v) {
     return [x, y, z];
 };
 
+Model.prototype.resize = function(newUSteps, newVSteps) {
+    this.uSteps = newUSteps;
+    this.vSteps = newVSteps;
+    
+    const totalVertices = this.uSteps * this.vSteps;
+    const totalIndices = (this.uSteps - 1) * (this.vSteps - 1) * 6;
+    
+    this.vertices = new Float32Array(totalVertices * 3);
+    this.normals = new Float32Array(totalVertices * 3);
+    this.texcoords = new Float32Array(totalVertices * 2);
+    this.tangents = new Float32Array(totalVertices * 4);
+    this.indices = new Uint16Array(totalIndices);
+    
+    this.vertexCount = 0;
+    this.indexCount = 0;
+};
+
 Model.prototype.init = function() {
     var gl = this.gl;
     
-    let vIndex = 0;  
     let iIndex = 0;  
     
     const uStep = 1.0 / (this.uSteps - 1);
@@ -50,18 +72,22 @@ Model.prototype.init = function() {
         const v = vi * vStep;
         for (let ui = 0; ui < this.uSteps; ui++) {
             const u = ui * uStep;
+            const vertexIndex = vi * this.uSteps + ui;
             const p = this.surfaceFunc(u, v);
             
             
-            this.vertices[vIndex] = p[0];
-            this.vertices[vIndex + 1] = p[1];
-            this.vertices[vIndex + 2] = p[2];
+            const vOffset = vertexIndex * 3;
+            this.vertices[vOffset] = p[0];
+            this.vertices[vOffset + 1] = p[1];
+            this.vertices[vOffset + 2] = p[2];
             
-            this.normals[vIndex] = 0;
-            this.normals[vIndex + 1] = 0;
-            this.normals[vIndex + 2] = 0;
+            this.normals[vOffset] = 0;
+            this.normals[vOffset + 1] = 0;
+            this.normals[vOffset + 2] = 0;
             
-            vIndex += 3;
+            const tcOffset = vertexIndex * 2;
+            this.texcoords[tcOffset] = u;
+            this.texcoords[tcOffset + 1] = v;
         }
     }
 
@@ -87,17 +113,20 @@ Model.prototype.init = function() {
 
     this.calculateAngleWeightedNormals();
 
-    this.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, this.vertices, gl.STATIC_DRAW);
 
-    this.normalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normals), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, this.normals, gl.STATIC_DRAW);
 
-    this.indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.texcoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.texcoords, gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.tangentBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, this.tangents, gl.STATIC_DRAW);
+
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
 
     this.vertexCount = this.vertices.length / 3;
     this.indexCount = this.indices.length;
@@ -108,8 +137,12 @@ Model.prototype.init = function() {
 
 
 Model.prototype.calculateAngleWeightedNormals = function() {
-  
+    this.vertexCount = this.vertices.length / 3;
     this.normals.fill(0);
+    let tangents = new Float32Array(this.vertexCount * 3);
+    tangents.fill(0);
+    let bitangents = new Float32Array(this.vertexCount * 3);
+    bitangents.fill(0);
     
     const vec1 = new Float32Array(3);
     const vec2 = new Float32Array(3);
@@ -119,15 +152,15 @@ Model.prototype.calculateAngleWeightedNormals = function() {
     const normals = this.normals;
     const indices = this.indices;
     
-    const subtractVectors = (out, a, aOffset, b, bOffset) => {
+    const subtractVectors = (out, aOffset, bOffset) => {
         out[0] = vertices[aOffset] - vertices[bOffset];
         out[1] = vertices[aOffset + 1] - vertices[bOffset + 1];
         out[2] = vertices[aOffset + 2] - vertices[bOffset + 2];
     };
     
     const calculateTriangleNormal = (out, v1Offset, v2Offset, v3Offset) => {
-        subtractVectors(vec1, vertices, v2Offset, vertices, v1Offset);
-        subtractVectors(vec2, vertices, v3Offset, vertices, v1Offset);
+        subtractVectors(vec1, v2Offset, v1Offset);
+        subtractVectors(vec2, v3Offset, v1Offset);
         
         out[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
         out[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
@@ -135,14 +168,15 @@ Model.prototype.calculateAngleWeightedNormals = function() {
     };
     
     const calculateAngle = (v1Offset, v2Offset, v3Offset) => {
-        subtractVectors(vec1, vertices, v2Offset, vertices, v1Offset);
-        subtractVectors(vec2, vertices, v3Offset, vertices, v1Offset);
+        subtractVectors(vec1, v2Offset, v1Offset);
+        subtractVectors(vec2, v3Offset, v1Offset);
         
         const len1Sq = vec1[0] * vec1[0] + vec1[1] * vec1[1] + vec1[2] * vec1[2];
         const len2Sq = vec2[0] * vec2[0] + vec2[1] * vec2[1] + vec2[2] * vec2[2];
         const dot = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
         
-        return Math.acos(dot / Math.sqrt(len1Sq * len2Sq));
+        const cos = dot / Math.sqrt(len1Sq * len2Sq);
+        return Math.acos(Math.min(1.0, Math.max(-1.0, cos)));
     };
 
     for(let i = 0; i < indices.length; i += 3) {
@@ -155,11 +189,47 @@ Model.prototype.calculateAngleWeightedNormals = function() {
         const angle1 = calculateAngle(idx1, idx2, idx3);
         const angle2 = calculateAngle(idx2, idx3, idx1);
         const angle3 = calculateAngle(idx3, idx1, idx2);
+
+        // Compute tangent and bitangent for the triangle
+        subtractVectors(vec1, idx2, idx1); // p1 - p0
+        subtractVectors(vec2, idx3, idx1); // p2 - p0
+
+        const vertexIndex1 = indices[i];
+        const vertexIndex2 = indices[i+1];
+        const vertexIndex3 = indices[i+2];
+
+        const uvOffset1 = vertexIndex1 * 2;
+        const uvOffset2 = vertexIndex2 * 2;
+        const uvOffset3 = vertexIndex3 * 2;
+
+        const delta_u1 = this.texcoords[uvOffset2] - this.texcoords[uvOffset1];
+        const delta_v1 = this.texcoords[uvOffset2 + 1] - this.texcoords[uvOffset1 + 1];
+        const delta_u2 = this.texcoords[uvOffset3] - this.texcoords[uvOffset1];
+        const delta_v2 = this.texcoords[uvOffset3 + 1] - this.texcoords[uvOffset1 + 1];
+
+        const denom = delta_u1 * delta_v2 - delta_u2 * delta_v1;
+        if (Math.abs(denom) < 1e-6) continue;
+        const invDenom = 1 / denom;
+
+        const tan = new Float32Array(3);
+        const bi = new Float32Array(3);
+        for (let k = 0; k < 3; k++) {
+            tan[k] = invDenom * (delta_v2 * vec1[k] - delta_v1 * vec2[k]);
+            bi[k] = invDenom * (delta_u1 * vec2[k] - delta_u2 * vec1[k]);
+        }
         
         for(let j = 0; j < 3; j++) {
             normals[idx1 + j] += normal[j] * angle1;
+            tangents[idx1 + j] += tan[j] * angle1;
+            bitangents[idx1 + j] += bi[j] * angle1;
+
             normals[idx2 + j] += normal[j] * angle2;
+            tangents[idx2 + j] += tan[j] * angle2;
+            bitangents[idx2 + j] += bi[j] * angle2;
+
             normals[idx3 + j] += normal[j] * angle3;
+            tangents[idx3 + j] += tan[j] * angle3;
+            bitangents[idx3 + j] += bi[j] * angle3;
         }
     }
     
@@ -177,35 +247,86 @@ Model.prototype.calculateAngleWeightedNormals = function() {
             normals[i+2] *= invLen;
         }
     }
-    
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
+    // Now orthogonalize tangents and compute handedness
+    const temp = new Float32Array(3);
+    const cros = new Float32Array(3);
+    const bitan = new Float32Array(3);
+    for (let vi = 0; vi < this.vertexCount; vi++) {
+        const offset = vi * 3;
+        const n = [normals[offset], normals[offset + 1], normals[offset + 2]];
+        let t_acc = [tangents[offset], tangents[offset + 1], tangents[offset + 2]];
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+        // Orthogonalize t_acc to n (prioritize normal)
+        let dot_tn = n[0] * t_acc[0] + n[1] * t_acc[1] + n[2] * t_acc[2];
+        temp[0] = n[0] * dot_tn;
+        temp[1] = n[1] * dot_tn;
+        temp[2] = n[2] * dot_tn;
+        t_acc[0] -= temp[0];
+        t_acc[1] -= temp[1];
+        t_acc[2] -= temp[2];
 
-    this.vertexCount = vertices.length / 3;
-    this.indexCount = indices.length;
+        // Normalize t_acc
+        let len_t = Math.sqrt(t_acc[0] * t_acc[0] + t_acc[1] * t_acc[1] + t_acc[2] * t_acc[2]);
+        if (len_t > EPSILON) {
+            t_acc[0] /= len_t;
+            t_acc[1] /= len_t;
+            t_acc[2] /= len_t;
+        } else {
+            t_acc = [1, 0, 0]; // default if zero
+        }
+
+        // Compute cross(n, t_acc)
+        cros[0] = n[1] * t_acc[2] - n[2] * t_acc[1];
+        cros[1] = n[2] * t_acc[0] - n[0] * t_acc[2];
+        cros[2] = n[0] * t_acc[1] - n[1] * t_acc[0];
+
+        // Normalize bitangents acc
+        bitan[0] = bitangents[offset];
+        bitan[1] = bitangents[offset + 1];
+        bitan[2] = bitangents[offset + 2];
+        let len_b = Math.sqrt(bitan[0] * bitan[0] + bitan[1] * bitan[1] + bitan[2] * bitan[2]);
+        if (len_b > EPSILON) {
+            bitan[0] /= len_b;
+            bitan[1] /= len_b;
+            bitan[2] /= len_b;
+        } else {
+            bitan = [0, 1, 0]; // default
+        }
+
+        // Handedness
+        let dot_b = cros[0] * bitan[0] + cros[1] * bitan[1] + cros[2] * bitan[2];
+        let handedness = (dot_b >= 0) ? 1.0 : -1.0;
+
+        // Store
+        const tanOffset = vi * 4;
+        this.tangents[tanOffset] = t_acc[0];
+        this.tangents[tanOffset + 1] = t_acc[1];
+        this.tangents[tanOffset + 2] = t_acc[2];
+        this.tangents[tanOffset + 3] = handedness;
+    }
 };
 
 Model.prototype.Draw = function() {
     const gl = this.gl;
     if (!gl || !shProgram || !shProgram.prog || 
-        shProgram.iAttribVertex === -1 || shProgram.iAttribNormal === -1) {
+        shProgram.iAttribVertex === -1 || shProgram.iAttribNormal === -1 ||
+        shProgram.iAttribTexcoord === -1 || shProgram.iAttribTangent === -1) {
         return;
     }
     
     
     const vertexLoc = shProgram.iAttribVertex;
     const normalLoc = shProgram.iAttribNormal;
+    const texcoordLoc = shProgram.iAttribTexcoord;
+    const tangentLoc = shProgram.iAttribTangent;
     
     gl.useProgram(shProgram.prog);
     
     gl.enableVertexAttribArray(vertexLoc);
     gl.enableVertexAttribArray(normalLoc);
+    gl.enableVertexAttribArray(texcoordLoc);
+    gl.enableVertexAttribArray(tangentLoc);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
     gl.vertexAttribPointer(vertexLoc, 3, gl.FLOAT, false, 0, 0);
@@ -213,24 +334,38 @@ Model.prototype.Draw = function() {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
     gl.vertexAttribPointer(normalLoc, 3, gl.FLOAT, false, 0, 0);
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.texcoordBuffer);
+    gl.vertexAttribPointer(texcoordLoc, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.tangentBuffer);
+    gl.vertexAttribPointer(tangentLoc, 4, gl.FLOAT, false, 0, 0);
+
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
 
     gl.disableVertexAttribArray(vertexLoc);
     gl.disableVertexAttribArray(normalLoc);
+    gl.disableVertexAttribArray(texcoordLoc);
+    gl.disableVertexAttribArray(tangentLoc);
 };
 
 Model.prototype.dispose = function() {
     var gl = this.gl;
     if (this.vertexBuffer) gl.deleteBuffer(this.vertexBuffer);
     if (this.normalBuffer) gl.deleteBuffer(this.normalBuffer);
+    if (this.texcoordBuffer) gl.deleteBuffer(this.texcoordBuffer);
+    if (this.tangentBuffer) gl.deleteBuffer(this.tangentBuffer);
     if (this.indexBuffer) gl.deleteBuffer(this.indexBuffer);
     
     this.vertexBuffer = null;
     this.normalBuffer = null;
+    this.texcoordBuffer = null;
+    this.tangentBuffer = null;
     this.indexBuffer = null;
     this.vertices = [];
     this.normals = [];
+    this.texcoords = [];
+    this.tangents = [];
     this.indices = [];
     this.vertexCount = 0;
     this.indexCount = 0;
@@ -247,6 +382,8 @@ Model.prototype.getCurveCount = function() {
 Model.prototype.getMemorySize = function() {
     var vertexSize = this.vertices.length * 4; 
     var normalSize = this.normals.length * 4;  
+    var texcoordSize = this.texcoords.length * 4;
+    var tangentSize = this.tangents.length * 4;
     var indexSize = this.indices.length * 2;  
-    return (vertexSize + normalSize + indexSize) / 1024.0;
+    return (vertexSize + normalSize + texcoordSize + tangentSize + indexSize) / 1024.0;
 };

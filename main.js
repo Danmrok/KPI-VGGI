@@ -9,6 +9,9 @@ let lightRadius = 5.0;
 let lastTime = 0;
 let uSlider;
 let vSlider;
+let diffuseTexture;
+let specularTexture;
+let normalTexture;
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -20,6 +23,8 @@ function ShaderProgram(name, program) {
     this.prog = program;
     this.iAttribVertex = -1;
     this.iAttribNormal = -1;
+    this.iAttribTexcoord = -1;
+    this.iAttribTangent = -1;
     this.iModelViewMatrix = -1;
     this.iModelViewProjectionMatrix = -1;
     this.iNormalMatrix = -1;
@@ -28,6 +33,9 @@ function ShaderProgram(name, program) {
     this.iDiffuseColor = -1;
     this.iSpecularColor = -1;
     this.iShininess = -1;
+    this.iDiffuse = -1;
+    this.iSpecular = -1;
+    this.iNormal = -1;
     this.Use = function() { gl.useProgram(this.prog); };
 }
 
@@ -55,6 +63,23 @@ function createProgram(gl, vShader, fShader) {
     return prog;
 }
 
+function createTexture(gl, url) {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255])); // placeholder
+
+  const image = new Image();
+  image.src = url;
+  image.addEventListener('load', () => {
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  });
+
+  return tex;
+}
 
 function draw(currentTime) {
     gl.clearColor(0.12,0.12,0.12,1);
@@ -83,8 +108,8 @@ function draw(currentTime) {
 
     let normalMatrix = m4.transpose(m4.inverse(matAccum1));
 
-    if (!shProgram || !shProgram.prog) {
-        console.error('Shader program is not initialized');
+    if (!shProgram || !shProgram.prog || !surfaceModel) {
+        requestAnimationFrame(draw);
         return;
     }
     
@@ -95,12 +120,24 @@ function draw(currentTime) {
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
     
     gl.uniform3fv(shProgram.iLightPosition, lightPosition);
-    gl.uniform3fv(shProgram.iAmbientColor, [0.2, 0.2, 0.2]);
+    gl.uniform3fv(shProgram.iAmbientColor, [0.3, 0.3, 0.3]);
     gl.uniform3fv(shProgram.iDiffuseColor, [0.7, 0.7, 0.7]);
     gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
     gl.uniform1f(shProgram.iShininess, 32.0);
 
-    if (surfaceModel) surfaceModel.Draw();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, diffuseTexture);
+    gl.uniform1i(shProgram.iDiffuse, 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, specularTexture);
+    gl.uniform1i(shProgram.iSpecular, 1);
+
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, normalTexture);
+    gl.uniform1i(shProgram.iNormal, 2);
+
+    surfaceModel.Draw();
     requestAnimationFrame(draw);
 }
 
@@ -112,6 +149,8 @@ function initGL() {
 
     shProgram.iAttribVertex = gl.getAttribLocation(prog, "vertex");
     shProgram.iAttribNormal = gl.getAttribLocation(prog, "normal");
+    shProgram.iAttribTexcoord = gl.getAttribLocation(prog, "texcoord");
+    shProgram.iAttribTangent = gl.getAttribLocation(prog, "tangent");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iModelViewMatrix = gl.getUniformLocation(prog, "ModelViewMatrix");
     shProgram.iNormalMatrix = gl.getUniformLocation(prog, "NormalMatrix");
@@ -120,6 +159,9 @@ function initGL() {
     shProgram.iDiffuseColor = gl.getUniformLocation(prog, "diffuseColor");
     shProgram.iSpecularColor = gl.getUniformLocation(prog, "specularColor");
     shProgram.iShininess = gl.getUniformLocation(prog, "shininess");
+    shProgram.iDiffuse = gl.getUniformLocation(prog, "u_diffuse");
+    shProgram.iSpecular = gl.getUniformLocation(prog, "u_specular");
+    shProgram.iNormal = gl.getUniformLocation(prog, "u_normal");
 
     createSliders();
 
@@ -130,6 +172,10 @@ function initGL() {
 
     surfaceModel.init();
 
+    diffuseTexture = createTexture(gl, 'old_wood_floor_diff_2k.png');
+    specularTexture = createTexture(gl, 'old_wood_floor_rough_2k.png');
+    normalTexture = createTexture(gl, 'old_wood_floor/old_wood_floor_nor_gl_2k.png');
+    
     gl.enable(gl.DEPTH_TEST);
 }
 
@@ -147,11 +193,10 @@ function debounce(func, wait) {
 }
 
 const debouncedUpdateSurface = debounce((uValue, vValue) => {
-    if (surfaceModel) {
-        surfaceModel.dispose();
-        surfaceModel.uSteps = uValue;
-        surfaceModel.vSteps = vValue;
-        surfaceModel.init();
+    if (surfaceModel && gl && shProgram) {
+        surfaceModel.resize(uValue, vValue);
+        surfaceModel.init();        
+        gl.useProgram(shProgram.prog);
     }
 }, 150);
 
@@ -185,18 +230,13 @@ function createSliders() {
     const vValue = document.createElement('span');
     vValue.id = 'vValue';
     vValue.textContent = vSlider.value;
-
-    let isUpdating = false;
-    let updateQueued = false;
     
     function handleSliderChange() {
         const uValue = parseInt(uSlider.value);
         const vValue = parseInt(vSlider.value);
         
-        
         document.getElementById('uValue').textContent = uValue;
         document.getElementById('vValue').textContent = vValue;
-
         
         debouncedUpdateSurface(uValue, vValue);
     }
@@ -217,30 +257,6 @@ function createSliders() {
     container.appendChild(vValue);
 
     document.body.appendChild(container);
-}
-
-function updateSurface() {
-    if (!surfaceModel) return;
-
-    try {
-        const currentProgram = gl.getParameter(gl.CURRENT_PROGRAM);
-        
-        surfaceModel.dispose();
-        surfaceModel.uSteps = parseInt(uSlider.value);
-        surfaceModel.vSteps = parseInt(vSlider.value);
-        surfaceModel.init();
-
-        if (currentProgram) {
-            gl.useProgram(currentProgram);
-        }
-        
-        requestAnimationFrame(() => {
-            document.getElementById('uValue').textContent = uSlider.value;
-            document.getElementById('vValue').textContent = vSlider.value;
-        });
-    } catch (error) {
-        console.error('Error updating surface:', error);
-    }
 }
 
 function init() {
