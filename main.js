@@ -9,14 +9,19 @@ let lightRadius = 5.0;
 let lastTime = 0;
 let uSlider;
 let vSlider;
+let scaleSlider;
+let angleSlider;
 let diffuseTexture;
 let specularTexture;
 let normalTexture;
+let texCenterU = 0.5;
+let texCenterV = 0.5;
+let texScale = 1.0;
+let texAngle = 0.0; // in degrees
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
-
 
 function ShaderProgram(name, program) {
     this.name = name;
@@ -36,9 +41,11 @@ function ShaderProgram(name, program) {
     this.iDiffuse = -1;
     this.iSpecular = -1;
     this.iNormal = -1;
+    this.iTexCenter = -1;
+    this.iTexAngle = -1;
+    this.iTexScale = -1;
     this.Use = function() { gl.useProgram(this.prog); };
 }
-
 
 function createProgram(gl, vShader, fShader) {
     let vsh = gl.createShader( gl.VERTEX_SHADER );
@@ -66,7 +73,7 @@ function createProgram(gl, vShader, fShader) {
 function createTexture(gl, url) {
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255])); // placeholder
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
 
   const image = new Image();
   image.src = url;
@@ -105,7 +112,6 @@ function draw(currentTime) {
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
     
     let modelViewProjection = m4.multiply(projection, matAccum1);
-
     let normalMatrix = m4.transpose(m4.inverse(matAccum1));
 
     if (!shProgram || !shProgram.prog || !surfaceModel) {
@@ -124,6 +130,10 @@ function draw(currentTime) {
     gl.uniform3fv(shProgram.iDiffuseColor, [0.7, 0.7, 0.7]);
     gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
     gl.uniform1f(shProgram.iShininess, 32.0);
+
+    gl.uniform2fv(shProgram.iTexCenter, [texCenterU, texCenterV]);
+    gl.uniform1f(shProgram.iTexAngle, deg2rad(texAngle));
+    gl.uniform1f(shProgram.iTexScale, texScale);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, diffuseTexture);
@@ -162,8 +172,11 @@ function initGL() {
     shProgram.iDiffuse = gl.getUniformLocation(prog, "u_diffuse");
     shProgram.iSpecular = gl.getUniformLocation(prog, "u_specular");
     shProgram.iNormal = gl.getUniformLocation(prog, "u_normal");
+    shProgram.iTexCenter = gl.getUniformLocation(prog, "texCenter");
+    shProgram.iTexAngle = gl.getUniformLocation(prog, "texAngle");
+    shProgram.iTexScale = gl.getUniformLocation(prog, "texScale");
 
-    createSliders();
+    setupSliders();
 
     surfaceModel = new Model('ShoeSurface', gl, {
         uSteps: parseInt(uSlider.value),
@@ -178,7 +191,6 @@ function initGL() {
     
     gl.enable(gl.DEPTH_TEST);
 }
-
 
 function debounce(func, wait) {
     let timeout;
@@ -200,63 +212,63 @@ const debouncedUpdateSurface = debounce((uValue, vValue) => {
     }
 }, 150);
 
-function createSliders() {
-    uSlider = document.createElement('input');
-    uSlider.type = 'range';
-    uSlider.min = '10';
-    uSlider.max = '50';
-    uSlider.value = '36';
-    uSlider.id = 'uSlider';
-
-    const uLabel = document.createElement('label');
-    uLabel.htmlFor = 'uSlider';
-    uLabel.textContent = 'U Resolution: ';
-
-    const uValue = document.createElement('span');
-    uValue.id = 'uValue';
-    uValue.textContent = uSlider.value;
-
-    vSlider = document.createElement('input');
-    vSlider.type = 'range';
-    vSlider.min = '10';
-    vSlider.max = '50';
-    vSlider.value = '24';
-    vSlider.id = 'vSlider';
-
-    const vLabel = document.createElement('label');
-    vLabel.htmlFor = 'vSlider';
-    vLabel.textContent = 'V Resolution: ';
-
-    const vValue = document.createElement('span');
-    vValue.id = 'vValue';
-    vValue.textContent = vSlider.value;
+function setupSliders() {
+    // Отримуємо посилання на існуючі елементи з HTML
+    uSlider = document.getElementById('uSlider');
+    vSlider = document.getElementById('vSlider');
+    scaleSlider = document.getElementById('scaleSlider');
+    angleSlider = document.getElementById('angleSlider');
     
     function handleSliderChange() {
         const uValue = parseInt(uSlider.value);
         const vValue = parseInt(vSlider.value);
+        texScale = parseFloat(scaleSlider.value);
+        texAngle = parseInt(angleSlider.value);
         
         document.getElementById('uValue').textContent = uValue;
         document.getElementById('vValue').textContent = vValue;
+        document.getElementById('scaleValue').textContent = texScale.toFixed(1);
+        document.getElementById('angleValue').textContent = texAngle;
         
         debouncedUpdateSurface(uValue, vValue);
     }
 
-    uSlider.oninput = handleSliderChange;
-    vSlider.oninput = handleSliderChange;
+    uSlider.addEventListener('input', handleSliderChange);
+    vSlider.addEventListener('input', handleSliderChange);
+    scaleSlider.addEventListener('input', handleSliderChange);
+    angleSlider.addEventListener('input', handleSliderChange);
+}
 
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.top = '10px';
-    container.style.left = '10px';
-    container.appendChild(uLabel);
-    container.appendChild(uSlider);
-    container.appendChild(uValue);
-    container.appendChild(document.createElement('br'));
-    container.appendChild(vLabel);
-    container.appendChild(vSlider);
-    container.appendChild(vValue);
+function handleKeyDown(event) {
+    let changed = false;
+    const step = 0.01;
 
-    document.body.appendChild(container);
+    switch (event.key.toLowerCase()) {
+        case 'a':
+            texCenterU -= step;
+            changed = true;
+            break;
+        case 'd':
+            texCenterU += step;
+            changed = true;
+            break;
+        case 'w':
+            texCenterV += step;
+            changed = true;
+            break;
+        case 's':
+            texCenterV -= step;
+            changed = true;
+            break;
+    }
+
+    texCenterU = Math.max(0, Math.min(1, texCenterU));
+    texCenterV = Math.max(0, Math.min(1, texCenterV));
+
+    if (changed) {
+        document.getElementById('centerUValue').textContent = texCenterU.toFixed(2);
+        document.getElementById('centerVValue').textContent = texCenterV.toFixed(2);
+    }
 }
 
 function init() {
@@ -267,8 +279,8 @@ function init() {
         if (!gl) throw "Browser does not support WebGL";
     }
     catch (e) {
-        document.getElementById("canvas-holder").innerHTML =
-            "<p>Sorry, could not get a WebGL graphics context.</p>";
+        document.getElementById("error-message").textContent = 
+            "Вибачте, не вдалося отримати контекст WebGL.";
         return;
     }
 
@@ -276,10 +288,12 @@ function init() {
         initGL();
     }
     catch (e) {
-        document.getElementById("canvas-holder").innerHTML =
-            "<p>Sorry, could not initialize the WebGL graphics context: " + e + "</p>";
+        document.getElementById("error-message").textContent = 
+            "Помилка ініціалізації WebGL: " + e;
         return;
     }
+
+    document.addEventListener('keydown', handleKeyDown);
 
     const rotatorCallback = () => {
         if (shProgram && gl) {

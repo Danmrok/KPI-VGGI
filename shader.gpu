@@ -8,6 +8,9 @@ var vertexShaderSource = `
     uniform mat4 ModelViewMatrix;
     uniform mat4 NormalMatrix;
     uniform vec3 lightPosition;
+    uniform vec2 texCenter;
+    uniform float texAngle;
+    uniform float texScale;
     
     varying vec3 vNormal;
     varying vec3 vViewPos;
@@ -21,7 +24,12 @@ var vertexShaderSource = `
         vViewPos = viewPos.xyz;
         vNormal = (NormalMatrix * vec4(normal, 0.0)).xyz;
         vLightPos = (ModelViewMatrix * vec4(lightPosition, 1.0)).xyz;
-        vTexcoord = texcoord;
+        vec2 translated = texcoord - texCenter;
+        float c = cos(texAngle);
+        float s = sin(texAngle);
+        vec2 rotated = vec2(c * translated.x - s * translated.y, s * translated.x + c * translated.y);
+        vec2 scaled = rotated * texScale;
+        vTexcoord = scaled + texCenter;
         vTangent = (NormalMatrix * vec4(tangent.xyz, 0.0)).xyz;
         vHandedness = tangent.w;
         

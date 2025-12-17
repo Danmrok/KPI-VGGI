@@ -1,21 +1,435 @@
 <!DOCTYPE html>
-<html>
+<html lang="uk">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <title>Control task - Variant 14</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Розрахунково-графічна робота - Варіант 14</title>
   <style>
-    body { background-color: #EEEEEE; font-family: sans-serif; }
-    #canvas-holder { display:flex; justify-content:center; margin-top:12px; }
-    canvas { background-color: #202020; border: 1px solid #333; }
+    :root {
+      --bg: #0a0a0a;
+      --surface: #1a1a1a;
+      --surface-elevated: #242424;
+      --primary: #bb86fc;
+      --primary-hover: #d4a5ff;
+      --secondary: #03dac6;
+      --accent: #cf6679;
+      --on-surface: #e8e8e8;
+      --on-surface-secondary: #a0a0a0;
+      --border: #2d2d2d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--bg) 0%, #121212 100%);
+      color: var(--on-surface);
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 25px;
+      max-width: 1400px;
+      width: 100%;
+    }
+
+    .canvas-section {
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+    }
+
+    .instructions {
+      font-size: 1rem;
+      color: var(--on-surface-secondary);
+      margin-bottom: 20px;
+    }
+
+    canvas {
+      background: radial-gradient(circle at center, #252525 0%, #1a1a1a 100%);
+      border-radius: 16px;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
+      max-width: 100%;
+      height: auto;
+      transition: box-shadow 0.3s ease;
+    }
+
+    canvas:hover {
+      box-shadow: 0 16px 56px rgba(187, 134, 252, 0.15), 0 0 0 1px var(--primary);
+    }
+
+    .controls-panel {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border);
+      height: fit-content;
+      max-height: 100%;
+      overflow-y: auto;
+      position: sticky;
+      top: 20px;
+    }
+
+    .controls-panel::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .controls-panel::-webkit-scrollbar-track {
+      background: var(--surface);
+      border-radius: 4px;
+    }
+
+    .controls-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .controls-panel::-webkit-scrollbar-thumb:hover {
+      background: var(--primary);
+    }
+
+    .panel-title {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      color: var(--primary);
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .control-group {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .control-group:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .control-group h3 {
+      font-size: 0.95rem;
+      margin: 0 0 12px 0;
+      color: var(--secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: var(--on-surface-secondary);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--border) 0%, var(--surface-elevated) 100%);
+      outline: none;
+      -webkit-appearance: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]:hover {
+      background: linear-gradient(90deg, var(--surface-elevated) 0%, #2d2d2d 100%);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      cursor: pointer;
+      box-shadow: 0 2px 12px rgba(187, 134, 252, 0.6), 0 0 0 3px rgba(187, 134, 252, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 20px rgba(187, 134, 252, 0.8), 0 0 0 5px rgba(187, 134, 252, 0.3);
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.05);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 12px rgba(187, 134, 252, 0.6), 0 0 0 3px rgba(187, 134, 252, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 20px rgba(187, 134, 252, 0.8), 0 0 0 5px rgba(187, 134, 252, 0.3);
+    }
+
+    .value-display {
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-top: 8px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+    }
+
+    .center-display {
+      background: var(--surface-elevated);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .center-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .center-value-box {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      border: 2px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .center-value-box:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(187, 134, 252, 0.2);
+    }
+
+    .center-label {
+      font-size: 0.85rem;
+      color: var(--on-surface-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .center-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .keyboard-controls {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .keyboard-title {
+      font-size: 0.85rem;
+      color: var(--on-surface-secondary);
+      margin-bottom: 12px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .keyboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-width: 160px;
+      margin: 0 auto 12px;
+    }
+
+    .key-group {
+      display: contents;
+    }
+
+    .key-button {
+      background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface) 100%);
+      border: 2px solid var(--border);
+      color: var(--on-surface);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 1rem;
+      text-align: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .key-button:hover {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(187, 134, 252, 0.4);
+    }
+
+    .key-button.empty {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    .key-button.empty:hover {
+      transform: none;
+      background: transparent;
+    }
+
+    .control-legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--on-surface-secondary);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-arrow {
+      color: var(--secondary);
+      font-weight: 700;
+    }
+
+    #error-message {
+      color: var(--accent);
+      text-align: center;
+      margin-top: 15px;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 12px;
+      background: rgba(207, 102, 121, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(207, 102, 121, 0.3);
+    }
+
+    @media (max-width: 1100px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .controls-panel {
+        position: static;
+      }
+    }
   </style>
+</head>
+<body onload="loadScripts()">
+  <div class="app">
+    <div class="canvas-section">
+      <h1>Розрахунково-графічна робота</h1>
+      <p class="instructions">Перетягуйте мишкою по поверхні для обертання (палець на сенсорі)</p>
+      <canvas width="800" height="800" id="webglcanvas"></canvas>
+      <div id="error-message" style="display: none;"></div>
+    </div>
+
+    <div class="controls-panel">
+      <div class="panel-title">Керування текстурою</div>
+
+      <div class="control-group">
+        <h3>Роздільна здатність сітки</h3>
+        <label for="uSlider">Параметр U</label>
+        <input type="range" id="uSlider" min="10" max="50" value="36">
+        <div class="value-display" id="uValue">36</div>
+
+        <label for="vSlider" style="margin-top: 20px;">Параметр V</label>
+        <input type="range" id="vSlider" min="10" max="50" value="24">
+        <div class="value-display" id="vValue">24</div>
+      </div>
+
+      <div class="control-group">
+        <h3>Трансформація текстури</h3>
+        <label for="scaleSlider">Масштаб</label>
+        <input type="range" id="scaleSlider" min="0.1" max="5.0" step="0.1" value="1.0">
+        <div class="value-display" id="scaleValue">1.0</div>
+
+        <label for="angleSlider" style="margin-top: 20px;">Кут повороту (°)</label>
+        <input type="range" id="angleSlider" min="-180" max="180" step="1" value="0">
+        <div class="value-display" id="angleValue">0</div>
+      </div>
+
+      <div class="control-group">
+        <h3>Центр трансформації (u,v)</h3>
+        <div class="center-display">
+          <div class="center-grid">
+            <div class="center-value-box">
+              <div class="center-label">U</div>
+              <div class="center-value" id="centerUValue">0.50</div>
+            </div>
+            <div class="center-value-box">
+              <div class="center-label">V</div>
+              <div class="center-value" id="centerVValue">0.50</div>
+            </div>
+          </div>
+
+          <div class="keyboard-controls">
+            <div class="keyboard-title">Керування клавіатурою</div>
+            <div class="keyboard-grid">
+              <div class="key-button empty"></div>
+              <div class="key-button">W</div>
+              <div class="key-button empty"></div>
+              <div class="key-button">A</div>
+              <div class="key-button">S</div>
+              <div class="key-button">D</div>
+            </div>
+            <div class="control-legend">
+              <div class="legend-item">
+                <span class="legend-arrow">A / D</span>
+                <span>по U</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-arrow">W / S</span>
+                <span>по V</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     function loadScript(url) {
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = url + '?v=' + new Date().getTime(); 
+        script.src = url + '?v=' + new Date().getTime();
         script.onload = resolve;
         script.onerror = reject;
         document.head.appendChild(script);
@@ -29,46 +443,27 @@
         await loadScript('./shader.gpu');
         await loadScript('./Model.js');
         await loadScript('./main.js');
-       
-        if (typeof init === 'function') {
-          init();
-        }
+        if (typeof init === 'function') init();
       } catch (error) {
         console.error('Error loading scripts:', error);
       }
     }
   </script>
-</head>
-<body onload="loadScripts()">
-  <h2 style="text-align:center">Control task - Variant 14</h2>
-
-  <p id="message" style="text-align:center">
-    Drag your mouse on the surface to rotate it. (Touch: use finger)
-  </p>
-
-  <div id="canvas-holder">
-    <canvas width="700" height="700" id="webglcanvas"></canvas>
-  </div>
-
-  <div id="error-message" style="color: red; text-align: center; margin-top: 10px;"></div>
 
   <script>
- 
-    window.onerror = function(msg, url, lineNo, columnNo, error) {
-      const errorMessage = document.getElementById('error-message');
-      if (errorMessage) {
-        errorMessage.textContent = 'Error: ' + msg;
-      }
+    window.onerror = function(msg) {
+      const errorEl = document.getElementById('error-message');
+      errorEl.style.display = 'block';
+      errorEl.textContent = 'Помилка: ' + msg;
       return false;
     };
 
     window.addEventListener('load', function() {
       const canvas = document.getElementById('webglcanvas');
       if (!canvas.getContext('webgl')) {
-        const errorMessage = document.getElementById('error-message');
-        if (errorMessage) {
-          errorMessage.textContent = 'Your browser does not support WebGL';
-        }
+        const errorEl = document.getElementById('error-message');
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'Ваш браузер не підтримує WebGL';
       }
     });
   </script>
