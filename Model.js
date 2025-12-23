@@ -190,9 +190,8 @@ Model.prototype.calculateAngleWeightedNormals = function() {
         const angle2 = calculateAngle(idx2, idx3, idx1);
         const angle3 = calculateAngle(idx3, idx1, idx2);
 
-        // Compute tangent and bitangent for the triangle
-        subtractVectors(vec1, idx2, idx1); // p1 - p0
-        subtractVectors(vec2, idx3, idx1); // p2 - p0
+        subtractVectors(vec1, idx2, idx1);
+        subtractVectors(vec2, idx3, idx1);
 
         const vertexIndex1 = indices[i];
         const vertexIndex2 = indices[i+1];
@@ -248,7 +247,6 @@ Model.prototype.calculateAngleWeightedNormals = function() {
         }
     }
 
-    // Now orthogonalize tangents and compute handedness
     const temp = new Float32Array(3);
     const cros = new Float32Array(3);
     const bitan = new Float32Array(3);
@@ -257,7 +255,6 @@ Model.prototype.calculateAngleWeightedNormals = function() {
         const n = [normals[offset], normals[offset + 1], normals[offset + 2]];
         let t_acc = [tangents[offset], tangents[offset + 1], tangents[offset + 2]];
 
-        // Orthogonalize t_acc to n (prioritize normal)
         let dot_tn = n[0] * t_acc[0] + n[1] * t_acc[1] + n[2] * t_acc[2];
         temp[0] = n[0] * dot_tn;
         temp[1] = n[1] * dot_tn;
@@ -266,22 +263,19 @@ Model.prototype.calculateAngleWeightedNormals = function() {
         t_acc[1] -= temp[1];
         t_acc[2] -= temp[2];
 
-        // Normalize t_acc
         let len_t = Math.sqrt(t_acc[0] * t_acc[0] + t_acc[1] * t_acc[1] + t_acc[2] * t_acc[2]);
         if (len_t > EPSILON) {
             t_acc[0] /= len_t;
             t_acc[1] /= len_t;
             t_acc[2] /= len_t;
         } else {
-            t_acc = [1, 0, 0]; // default if zero
+            t_acc = [1, 0, 0]; 
         }
 
-        // Compute cross(n, t_acc)
         cros[0] = n[1] * t_acc[2] - n[2] * t_acc[1];
         cros[1] = n[2] * t_acc[0] - n[0] * t_acc[2];
         cros[2] = n[0] * t_acc[1] - n[1] * t_acc[0];
 
-        // Normalize bitangents acc
         bitan[0] = bitangents[offset];
         bitan[1] = bitangents[offset + 1];
         bitan[2] = bitangents[offset + 2];
@@ -291,14 +285,12 @@ Model.prototype.calculateAngleWeightedNormals = function() {
             bitan[1] /= len_b;
             bitan[2] /= len_b;
         } else {
-            bitan = [0, 1, 0]; // default
+            bitan = [0, 1, 0];
         }
 
-        // Handedness
         let dot_b = cros[0] * bitan[0] + cros[1] * bitan[1] + cros[2] * bitan[2];
         let handedness = (dot_b >= 0) ? 1.0 : -1.0;
 
-        // Store
         const tanOffset = vi * 4;
         this.tangents[tanOffset] = t_acc[0];
         this.tangents[tanOffset + 1] = t_acc[1];
