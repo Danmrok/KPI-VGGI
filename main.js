@@ -120,10 +120,10 @@ function draw(currentTime) {
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
     
     gl.uniform3fv(shProgram.iLightPosition, lightPosition);
-    gl.uniform3fv(shProgram.iAmbientColor, [0.3, 0.3, 0.3]);
-    gl.uniform3fv(shProgram.iDiffuseColor, [0.7, 0.7, 0.7]);
+    gl.uniform3fv(shProgram.iAmbientColor, [0.35, 0.35, 0.3]);
+    gl.uniform3fv(shProgram.iDiffuseColor, [1.0, 1.0, 1.0]);
     gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
-    gl.uniform1f(shProgram.iShininess, 32.0);
+    gl.uniform1f(shProgram.iShininess, 80.0);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, diffuseTexture);
