@@ -47,51 +47,146 @@ The main challenges of the task include:
 
 ## Chapter 2: Theoretical Framework
 
-### 2.1 Parametric Surfaces
+### 2. Theoretical foundations of implementation
 
-A parametric surface is defined by a vector-valued function:
+#### 2.1 Parametric specification of the surface
 
-$$\mathbf{r}(u,v) = (x(u,v), y(u,v), z(u,v))$$
+The surface is specified by a parametric function of two variables:
 
-In this work, the surface is defined as:
+$$
+\mathbf{r}(u,v) = \bigl( x(u,v),\ y(u,v),\ z(u,v) \bigr),\quad u,v \in [0,1]
+$$
 
-$$\mathbf{r}(u,v) = \left( 2(u - 0.5), \quad 2(v - 0.5), \quad \frac{[2(u - 0.5)]^3}{3} - \frac{[2(v - 0.5)]^2}{2} \right)$$
+In this work, the following analytical form of the surface is used:
 
-This function produces a saddle-like surface with cubic curvature along the $x$-axis.
+$$
+\begin{aligned}
+x(u,v) &= 2(u - 0.5), \\
+y(u,v) &= 2(v - 0.5), \\
+z(u,v) &= \dfrac{[2(u - 0.5)]^3}{3} - \dfrac{[2(v - 0.5)]^2}{2}.
+\end{aligned}
+$$
 
-### 2.2 Normal Calculation
+After replacing $X = 2(u - 0.5)$, $Y = 2(v - 0.5)$ we get the classical form:
 
-To achieve smooth lighting, **angle-weighted normals** are used. For each triangle, a face normal is computed using the cross product of its edges. The contribution of each face normal to a vertex normal is weighted by the angle at that vertex. After accumulation, all vertex normals are normalized.
+$$
+z = \dfrac{X^3}{3} - \dfrac{Y^2}{2}
+$$
 
-This method provides better visual smoothness compared to simple averaging.
+This surface belongs to the class of **saddle-shaped** (hyperbolic paraboloid with cubic nonlinearity along the $X$ axis). It is characterized by:
+- negative Gaussian curvature at most points,
+- the presence of a saddle point in the center ($u=v=0.5$),
+- pronounced asymmetry along the $u$ axis.
 
-### 2.3 Tangent Space and Normal Mapping
+#### 2.2 Calculating Normals Taking into Account Angle-Weighted Normals
 
-Normal mapping requires a tangent space basis consisting of:
-- Tangent $\mathbf{t}$
-- Bitangent $\mathbf{b}$
-- Normal $\mathbf{n}$
+For high-quality illumination and smoothness of the surface, normals are calculated using the **angle-weighted vertex normals** method:
 
-Tangents are calculated using position and texture coordinate differences within each triangle. The **Gram–Schmidt process** is used to orthogonalize the tangent with respect to the normal. The handedness of the tangent space is stored in the fourth component of the tangent vector.
+1. For each face (triangle), the plane normal vector is calculated using the vector product:
 
-The **TBN matrix** is constructed in the fragment shader and used to transform normals from tangent space to world space.
+$$
+\mathbf{N} = (\mathbf{P_2} - \mathbf{P_1}) \times (\mathbf{P_3} - \mathbf{P_1})
+$$
 
-### 2.4 Texture Coordinate Transformation
+2. For each vertex of the triangle, the angle at this vertex is determined (using the scalar product and arccosine).
 
-Texture coordinates are transformed in the vertex shader using the following steps:
+3. The contribution of the face normal to the vertex normal is proportional to the angle at this vertex.
 
-1. Offset coordinates relative to a user-defined center
-2. Rotate by a specified angle
-3. Apply uniform scaling
-4. Translate coordinates back to the original center
+4. After accumulating all contributions for each vertex, normalization is performed:
 
-This approach ensures rotation and scaling around an arbitrary point in texture space.
+$$
+\mathbf{n} = \frac{\sum (\mathbf{N}_i \cdot w_i)}{\left\| \sum (\mathbf{N}_i \cdot w_i) \right\|},\quad w_i = \text{angle at vertex}
+$$
 
-### 2.5 Lighting Model
+This approach provides significantly better visual smoothness compared to simple averaging of normals of neighboring faces, especially on surfaces with different density of triangles and sharp corners.
 
-A modified **Phong lighting model** is used:
-- **Diffuse lighting** is computed according to Lambert's law using the perturbed normal from the normal map
-- **Specular highlights** are calculated using the Blinn–Phong model, where roughness texture values are inverted to control specular intensity
+#### 2.3 Construction of tangent space and normal mapping
+
+To implement **normal mapping**, it is necessary to construct a local coordinate system (TBN — Tangent, Bitangent, Normal) for each vertex.
+
+Calculation algorithm:
+
+1. For each face, the vectors $\Delta\mathbf{P}_1$, $\Delta\mathbf{P}_2$ and $\Delta\mathbf{UV}_1$, $\Delta\mathbf{UV}_2$ are calculated from the vertex coordinates and texture coordinates.
+
+2. The system of equations is solved:
+
+$$
+\mathbf{T}' = \mathbf{T} - \frac{\mathbf{T} \cdot \mathbf{N}}{\mathbf{N} \cdot \mathbf{N}}\mathbf{N}
+$$
+
+The matrix of the system is inverted, which gives $\mathbf{T}$ and $\mathbf{B}$.
+
+3. The tangent $\mathbf{T}$ is orthogonalized with respect to the normal $\mathbf{N}$ using the Gram-Schmidt method:
+
+$$
+\mathbf{T}' = \mathbf{T} - (\mathbf{T}\cdot\hat{\mathbf{N}})\hat{\mathbf{N}}
+$$
+
+4. The **handedness** (the sign of the scalar product $\mathbf{B}$ with $\mathbf{N} \times \mathbf{T}'$) is preserved, which is necessary for the correct reconstruction of the bitangent in the shader.
+
+5. In the fragment shader, the TBN matrix is ​​constructed:
+
+$$
+\mathbf{M}_{\text{TBN}} = \begin{bmatrix}
+\mathbf{t}' & \mathbf{b}' & \mathbf{n}
+\end{bmatrix}
+$$
+
+The normal from the texture is transformed from the range $[0,1]$ to $[-1,1]$ and applied:
+
+$$
+\mathbf{n}_{\text{world}} = \mathbf{M}_{\text{TBN}} \cdot (2 \cdot \text{texture}(u_{\text{normal}}, uv) - 1)
+$$
+
+#### 2.4 Transforming texture coordinates around an arbitrary center
+
+To allow rotation and scaling of the texture around an arbitrary point $(u_c, v_c)$, the classical sequence of affine transformations is applied in the vertex shader:
+
+$$
+\begin{aligned}
+\mathbf{uv}' &= (u,v) - (u_c, v_c) \\
+\mathbf{uv}'' &= R(\theta) \cdot \mathbf{uv}' \\
+\mathbf{uv}''' &= s \cdot \mathbf{uv}'' \\
+\text{final}\ uv &= \mathbf{uv}''' + (u_c, v_c)
+\end{aligned}
+$$
+
+where $R(\theta)$ is the rotation matrix by angle $\theta$:
+
+$$
+R(\theta) = \begin{pmatrix}
+\cos\theta & -\sin\theta \\
+\sin\theta & \cos\theta
+\end{pmatrix}
+$$
+
+This approach allows the user to interactively manipulate the texture (scale, rotate, center shift) without overlapping edges and artifacts.
+
+#### 2.5 Lighting model
+
+A modified **Phong** model with **Blinn-Phong** elements is used:
+
+- **Ambient lighting** — constant contribution of the diffuse color texture
+
+$$
+\text{ambient} = k_a \cdot \text{diffuseTex}
+$$
+
+- **Diffuse lighting** (Lambert) — using the normal from the normal map:
+
+$$
+\text{diffuse} = k_d \cdot \max(\mathbf{n} \cdot \mathbf{l}, 0) \cdot \text{diffuseTex}
+$$
+
+- **Specular reflection** — using the Blinn-Phong model using an inverted roughness texture:
+
+$$
+\text{specular} = k_s \cdot \left( \mathbf{n} \cdot \mathbf{h} \right)^{\text{shininess}} \cdot (1 - \text{roughnessTex})
+$$
+
+where $\mathbf{h}$ is a half-vector between the direction of the light source and the direction of the observer.
+
+This combination allows you to obtain realistic lighting of a wooden surface with pronounced highlights and relief.
 
 ---
 

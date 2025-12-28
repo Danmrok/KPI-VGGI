@@ -304,6 +304,23 @@ Model.prototype.Draw = function() {
     if (!gl || !shProgram || !shProgram.prog || 
         shProgram.iAttribVertex === -1 || shProgram.iAttribNormal === -1 ||
         shProgram.iAttribTexcoord === -1 || shProgram.iAttribTangent === -1) {
+        if (!gl) console.error('Draw: gl is null');
+        if (!shProgram) console.error('Draw: shProgram is null');
+        if (!shProgram || !shProgram.prog) console.error('Draw: shProgram.prog is null');
+        if (shProgram && (shProgram.iAttribVertex === -1 || shProgram.iAttribNormal === -1 ||
+            shProgram.iAttribTexcoord === -1 || shProgram.iAttribTangent === -1)) {
+            console.error('Draw: Missing attributes', {
+                vertex: shProgram.iAttribVertex,
+                normal: shProgram.iAttribNormal,
+                texcoord: shProgram.iAttribTexcoord,
+                tangent: shProgram.iAttribTangent
+            });
+        }
+        return;
+    }
+    
+    if (this.indexCount === 0) {
+        console.error('Draw: indexCount is 0!');
         return;
     }
     
@@ -333,7 +350,18 @@ Model.prototype.Draw = function() {
     gl.vertexAttribPointer(tangentLoc, 4, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    
+    const drawError = gl.getError();
+    if (drawError !== gl.NO_ERROR) {
+        console.error('WebGL error before drawElements:', drawError);
+    }
+    
     gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
+    
+    const drawErrorAfter = gl.getError();
+    if (drawErrorAfter !== gl.NO_ERROR) {
+        console.error('WebGL error after drawElements:', drawErrorAfter, 'indexCount:', this.indexCount);
+    }
 
     gl.disableVertexAttribArray(vertexLoc);
     gl.disableVertexAttribArray(normalLoc);

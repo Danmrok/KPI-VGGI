@@ -27,27 +27,35 @@
       color: var(--on-surface);
       font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       min-height: 100vh;
       display: grid;
       place-items: center;
+      overflow-x: hidden;
     }
 
     .app {
       display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 25px;
-      max-width: 1400px;
+      grid-template-columns: 1fr 270px;
+      gap: 15px;
+      max-width: 1380px;
       width: 100%;
+      height: calc(100vh - 20px);
+      max-height: 900px;
     }
 
     .canvas-section {
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
     }
 
     h1 {
-      font-size: 2.2rem;
-      margin-bottom: 8px;
+      font-size: 1.6rem;
+      margin-bottom: 4px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -56,17 +64,19 @@
     }
 
     .instructions {
-      font-size: 1rem;
+      font-size: 0.85rem;
       color: var(--on-surface-secondary);
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
 
     canvas {
       background: radial-gradient(circle at center, #252525 0%, #1a1a1a 100%);
-      border-radius: 16px;
+      border-radius: 12px;
       box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
-      max-width: 100%;
-      height: auto;
+      width: 100%;
+      max-width: 900px;
+      max-height: 800px;
+      aspect-ratio: 1;
       transition: box-shadow 0.3s ease;
     }
 
@@ -76,14 +86,13 @@
 
     .controls-panel {
       background: var(--surface);
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 5px;
       box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border);
-      height: fit-content;
-      max-height: 100%;
+      height: 100%;
+      max-height: 890px;
       overflow-y: auto;
-      position: sticky;
-      top: 20px;
+      overflow-x: hidden;
     }
 
     .controls-panel::-webkit-scrollbar {
@@ -105,16 +114,16 @@
     }
 
     .panel-title {
-      font-size: 1.3rem;
-      margin-bottom: 20px;
+      font-size: 1rem;
+      margin-bottom: 10px;
       color: var(--primary);
       text-align: center;
       font-weight: 600;
     }
 
     .control-group {
-      margin-bottom: 24px;
-      padding-bottom: 20px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
     }
 
@@ -125,8 +134,8 @@
     }
 
     .control-group h3 {
-      font-size: 0.95rem;
-      margin: 0 0 12px 0;
+      font-size: 0.75rem;
+      margin: 0 0 6px 0;
       color: var(--secondary);
       font-weight: 600;
       text-transform: uppercase;
@@ -135,9 +144,9 @@
 
     label {
       display: block;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       font-weight: 500;
-      font-size: 0.95rem;
+      font-size: 0.75rem;
       color: var(--on-surface-secondary);
     }
 
@@ -193,35 +202,36 @@
 
     .value-display {
       text-align: center;
-      font-size: 1.3rem;
+      font-size: 0.95rem;
       font-weight: 700;
-      margin-top: 8px;
+      margin-top: 3px;
+      margin-bottom: 3px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
     }
 
     .center-display {
       background: var(--surface-elevated);
-      border-radius: 12px;
-      padding: 16px;
-      margin-top: 12px;
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 6px;
       border: 1px solid var(--border);
     }
 
     .center-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 6px;
+      margin-bottom: 8px;
     }
 
     .center-value-box {
       background: var(--surface);
-      border-radius: 10px;
-      padding: 12px;
+      border-radius: 6px;
+      padding: 6px;
       text-align: center;
       border: 2px solid var(--border);
       transition: all 0.3s ease;
@@ -234,16 +244,16 @@
     }
 
     .center-label {
-      font-size: 0.85rem;
+      font-size: 0.7rem;
       color: var(--on-surface-secondary);
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
       font-weight: 600;
     }
 
     .center-value {
-      font-size: 1.5rem;
+      font-size: 1rem;
       font-weight: 700;
       background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
       -webkit-background-clip: text;
@@ -253,15 +263,15 @@
 
     .keyboard-controls {
       background: var(--surface);
-      border-radius: 10px;
-      padding: 14px;
+      border-radius: 6px;
+      padding: 8px;
       border: 1px solid var(--border);
     }
 
     .keyboard-title {
-      font-size: 0.85rem;
+      font-size: 0.7rem;
       color: var(--on-surface-secondary);
-      margin-bottom: 12px;
+      margin-bottom: 6px;
       text-align: center;
       font-weight: 600;
     }
@@ -269,9 +279,9 @@
     .keyboard-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      max-width: 160px;
-      margin: 0 auto 12px;
+      gap: 5px;
+      max-width: 130px;
+      margin: 0 auto 6px;
     }
 
     .key-group {
@@ -282,11 +292,11 @@
       background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface) 100%);
       border: 2px solid var(--border);
       color: var(--on-surface);
-      padding: 10px;
-      border-radius: 8px;
+      padding: 6px;
+      border-radius: 5px;
       font-family: 'Courier New', monospace;
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 0.85rem;
       text-align: center;
       transition: all 0.2s ease;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -313,8 +323,8 @@
     .control-legend {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      font-size: 0.85rem;
+      gap: 5px;
+      font-size: 0.7rem;
       color: var(--on-surface-secondary);
     }
 
@@ -341,12 +351,27 @@
       border: 1px solid rgba(207, 102, 121, 0.3);
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1200px) {
       .app {
         grid-template-columns: 1fr;
+        max-height: none;
+        height: auto;
       }
       .controls-panel {
-        position: static;
+        max-height: none;
+        height: auto;
+      }
+      .canvas-section {
+        height: auto;
+      }
+    }
+
+    @media (max-width: 1440px) and (min-width: 1201px) {
+      .app {
+        gap: 18px;
+      }
+      canvas {
+        max-width: 800px;
       }
     }
   </style>
@@ -356,7 +381,7 @@
     <div class="canvas-section">
       <h1>Розрахунково-графічна робота</h1>
       <p class="instructions">Перетягуйте мишкою по поверхні для обертання (палець на сенсорі)</p>
-      <canvas width="800" height="800" id="webglcanvas"></canvas>
+      <canvas width="600" height="600" id="webglcanvas"></canvas>
       <div id="error-message" style="display: none;"></div>
     </div>
 
@@ -369,9 +394,29 @@
         <input type="range" id="uSlider" min="10" max="50" value="36">
         <div class="value-display" id="uValue">36</div>
 
-        <label for="vSlider" style="margin-top: 20px;">Параметр V</label>
+        <label for="vSlider" style="margin-top: 10px;">Параметр V</label>
         <input type="range" id="vSlider" min="10" max="50" value="24">
         <div class="value-display" id="vValue">24</div>
+      </div>
+
+      <div class="control-group">
+        <h3>Параметри матеріалу</h3>
+        
+        <label for="ambientSlider">Ambient (Фон)</label>
+        <input type="range" id="ambientSlider" min="0" max="1" step="0.01" value="0.35">
+        <div class="value-display" id="ambientValue">0.35</div>
+
+        <label for="diffuseSlider">Diffuse (Розсіювання)</label>
+        <input type="range" id="diffuseSlider" min="0" max="2" step="0.01" value="1.0">
+        <div class="value-display" id="diffuseValue">1.00</div>
+
+        <label for="specularSlider">Specular (Блік)</label>
+        <input type="range" id="specularSlider" min="0" max="2" step="0.01" value="1.0">
+        <div class="value-display" id="specularValue">1.00</div>
+
+        <label for="shininessSlider">Shininess (Блиск)</label>
+        <input type="range" id="shininessSlider" min="1" max="200" step="1" value="80">
+        <div class="value-display" id="shininessValue">80</div>
       </div>
 
       <div class="control-group">
@@ -380,7 +425,7 @@
         <input type="range" id="scaleSlider" min="0.1" max="5.0" step="0.1" value="1.0">
         <div class="value-display" id="scaleValue">1.0</div>
 
-        <label for="angleSlider" style="margin-top: 20px;">Кут повороту (°)</label>
+        <label for="angleSlider" style="margin-top: 10px;">Кут повороту (°)</label>
         <input type="range" id="angleSlider" min="-180" max="180" step="1" value="0">
         <div class="value-display" id="angleValue">0</div>
       </div>
