@@ -1,0 +1,114 @@
+var vertexShaderSource = `
+    precision mediump float;
+    
+    attribute vec3 vertex;
+    attribute vec3 normal;
+    attribute vec2 texcoord;
+    attribute vec4 tangent;
+    
+    uniform mat4 ModelViewProjectionMatrix;
+    uniform mat4 ModelViewMatrix;
+    uniform mat4 NormalMatrix;
+    uniform vec3 lightPosition;
+    uniform vec2 texCenter;
+    uniform float texAngle;
+    uniform float texScale;
+    
+    varying vec3 vNormal;
+    varying vec3 vViewPos;
+    varying vec3 vLightPos;
+    varying vec2 vTexcoord; 
+    varying vec2 vRawTexcoord;
+    varying vec3 vTangent;
+    varying float vHandedness;
+    
+    void main() {
+        vec4 viewPos = ModelViewMatrix * vec4(vertex, 1.0);
+        vViewPos = viewPos.xyz;
+        vNormal = (NormalMatrix * vec4(normal, 0.0)).xyz;
+        vLightPos = (ModelViewMatrix * vec4(lightPosition, 1.0)).xyz;
+        
+        vRawTexcoord = texcoord;
+
+        vec2 translated = texcoord - texCenter;
+        float c = cos(texAngle);
+        float s = sin(texAngle);
+        vec2 rotated = vec2(c * translated.x - s * translated.y, s * translated.x + c * translated.y);
+        vec2 scaled = rotated * texScale;
+        vTexcoord = scaled + texCenter;
+        
+        vTangent = (NormalMatrix * vec4(tangent.xyz, 0.0)).xyz;
+        vHandedness = tangent.w;
+        
+        gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
+    }
+`;
+
+var fragmentShaderSource = `
+    precision mediump float;
+    
+    varying vec3 vNormal;
+    varying vec3 vViewPos;
+    varying vec3 vLightPos;
+    varying vec2 vTexcoord;
+    varying vec2 vRawTexcoord;
+    varying vec3 vTangent;
+    varying float vHandedness;
+    
+    uniform vec3 ambientColor;
+    uniform vec3 diffuseColor;
+    uniform vec3 specularColor;
+    uniform float shininess;
+    
+    uniform sampler2D u_diffuse;
+    uniform sampler2D u_specular;
+    uniform sampler2D u_normal;
+    uniform vec2 texCenter;
+    
+    void main() {
+        vec3 n = normalize(vNormal);
+        
+        vec3 normal = n;
+        if (length(vTangent) > 0.1) {
+            vec3 t = normalize(vTangent);
+            vec3 b = vHandedness * normalize(cross(n, t));
+            mat3 tbn = mat3(t, b, n);
+            vec3 normalMap = texture2D(u_normal, vTexcoord).rgb * 2.0 - 1.0;
+            if (length(normalMap) > 0.1) {
+                normal = normalize(tbn * normalMap);
+            }
+        }
+        
+        vec3 lightDir = normalize(vLightPos - vViewPos);
+        vec3 viewDir = normalize(-vViewPos);
+        vec3 reflectDir = reflect(-lightDir, normal);
+        
+        vec3 diffuseTex = texture2D(u_diffuse, vTexcoord).rgb;
+        if (diffuseTex.b > 0.9 && diffuseTex.r < 0.1 && diffuseTex.g < 0.1) {
+            diffuseTex = vec3(0.8, 0.6, 0.4); // Коричневий колір дерева за замовчуванням
+        }
+        
+        float specularTex = 1.0 - texture2D(u_specular, vTexcoord).r;
+        if (specularTex < 0.01 || specularTex > 0.99) {
+            specularTex = 0.5;
+        }
+        
+        vec3 ambient = ambientColor * diffuseTex;
+        
+        float diff = max(dot(normal, lightDir), 0.0);
+        vec3 diffuse = diff * diffuseColor * diffuseTex;
+        
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+        vec3 specular = spec * specularColor * vec3(specularTex);
+        
+        vec3 result = ambient + diffuse + specular;
+
+        float dotRadius = 0.02; 
+        float dist = distance(vRawTexcoord, texCenter);        
+        float alpha = 1.0 - smoothstep(dotRadius - 0.005, dotRadius, dist);
+        
+        vec3 finalColor = mix(result, vec3(1.0, 0.0, 0.0), alpha);
+        
+        gl_FragColor = vec4(finalColor, 1.0);
+    }
+`;
